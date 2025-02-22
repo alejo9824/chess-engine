@@ -1,64 +1,197 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Interactive Chessboard</title>
+    <title>Tablero de Ajedrez</title>
     <style>
-        #chessboard {
+        .board {
             display: grid;
-            grid-template-columns: repeat(8, 1fr);
-            width: 400px;
-            height: 400px;
-            border: 2px solid black;
+            grid-template-columns: repeat(8, 100px);
+            grid-template-rows: repeat(8, 100px);
+            border: 2px solid #333;
+            width: fit-content;
         }
-        .square {
-            width: 50px;
-            height: 50px;
+
+        .cell {
+            width: 100px;
+            height: 100px;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-weight: bold;
+            font-size: 60px;
+            cursor: pointer;
+            position: relative;
         }
+
         .white {
             background-color: #f0d9b5;
         }
+
         .black {
             background-color: #b58863;
+        }
+
+        .selected {
+            background-color: #7b61ff !important;
+        }
+
+        .last-move {
+            background-color: rgba(155, 199, 0, 0.41) !important;
         }
     </style>
 </head>
 <body>
-    <div id="chessboard"></div>
+    <div id="chessBoard" class="board"></div>
 
     <script>
-        // Function to render the chessboard
-        async function renderChessboard() {
-            const response = await fetch('/api/chessboard');
-            const boardData = await response.json();
-            const board = boardData.board;
-            const chessboardElement = document.getElementById('chessboard');
+        const pieceSymbols = {
+            'white': {
+                'King': '♔',
+                'Queen': '♕',
+                'Rook': '♖',
+                'Bishop': '♗',
+                'Knight': '♘',
+                'pawn': '♙'
+            },
+            'black': {
+                'King': '♚',
+                'Queen': '♛',
+                'Rook': '♜',
+                'Bishop': '♝',
+                'Knight': '♞',
+                'pawn': '♟'
+            }
+        };
 
-            board.forEach((row, i) => {
-                row.forEach((square, j) => {
-                    const squareElement = document.createElement('div');
-                    squareElement.classList.add('square');
+        let selectedPiece = null;
+        let selectedCell = null;
+        let lastMoveFrom = null;
+        let lastMoveTo = null;
+
+        function getCellColor(x, y) {
+            return (x + y) % 2 === 0 ? 'white' : 'black';
+        }
+
+        function createBoard(boardData) {
+            const boardElement = document.getElementById('chessBoard');
+            boardElement.innerHTML = '';
+
+            boardData.forEach((row, x) => {
+                row.forEach((cell, y) => {
+                    const cellElement = document.createElement('div');
+                    const cellColor = getCellColor(x, y);
+                    cellElement.className = `cell ${cellColor}`;
+                    cellElement.dataset.x = x;
+                    cellElement.dataset.y = y;
                     
-                    // Alternate colors
-                    squareElement.classList.add((i + j) % 2 === 0 ? 'white' : 'black');
-                    
-                    // Add coordinate labels
-                    
-                    
-                    // Add hover information
-                    squareElement.title = `Square (${i}, ${j}). Piece: ${square.Piece ? square.Piece.name : 'None'}`;
-                    
-                    chessboardElement.appendChild(squareElement);
+                    if (cell.piece) {
+                        const color = cell.piece.Color?.toLowerCase() || cell.piece.color;
+                        const pieceName = cell.piece.name;
+                        if (pieceSymbols[color] && pieceSymbols[color][pieceName]) {
+                            cellElement.textContent = pieceSymbols[color][pieceName];
+                            cellElement.dataset.pieceColor = color;
+                            cellElement.dataset.pieceName = pieceName;
+                        }
+                    }
+
+                    // Marcar últimos movimientos
+                    if (lastMoveFrom && lastMoveTo) {
+                        if (x === lastMoveFrom.x && y === lastMoveFrom.y ||
+                            x === lastMoveTo.x && y === lastMoveTo.y) {
+                            cellElement.classList.add('last-move');
+                        }
+                    }
+
+                    cellElement.addEventListener('click', handleCellClick);
+                    boardElement.appendChild(cellElement);
                 });
             });
         }
 
-        // Render the board when the page loads
-        renderChessboard();
+        function handleCellClick(event) {
+            const clickedCell = event.target;
+            const x = parseInt(clickedCell.dataset.x);
+            const y = parseInt(clickedCell.dataset.y);
+
+            if (!selectedPiece && clickedCell.textContent) {
+                selectPiece(clickedCell, x, y);
+            } 
+            else if (selectedPiece) {
+                if (clickedCell === selectedCell) {
+                    deselectPiece();
+                } 
+                else {
+                    movePiece(x, y);
+                }
+            }
+        }
+
+        function selectPiece(cell, x, y) {
+            selectedPiece = {
+                x: x,
+                y: y
+            };
+            selectedCell = cell;
+            cell.classList.add('selected');
+        }
+
+        function deselectPiece() {
+            if (selectedCell) {
+                selectedCell.classList.remove('selected');
+            }
+            selectedPiece = null;
+            selectedCell = null;
+        }
+
+        async function movePiece(toX, toY) {
+            const moveData = {
+                x1: selectedPiece.x,
+                y1: selectedPiece.y,
+                x2: toX,
+                y2: toY
+            };
+
+            try {
+                const response = await fetch('/api/move', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(moveData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Error al mover la pieza');
+                }
+
+                const newBoardState = await response.json();
+                
+                // Guardar el último movimiento para resaltarlo
+                lastMoveFrom = { x: selectedPiece.x, y: selectedPiece.y };
+                lastMoveTo = { x: toX, y: toY };
+
+                // Actualizar el tablero con los datos del servidor
+                createBoard(newBoardState.board);
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al mover la pieza: ' + error.message);
+            } finally {
+                deselectPiece();
+            }
+        }
+
+        async function fetchBoardData() {
+            try {
+                const response = await fetch('http://localhost:8080/api/chessboard'); // Asumiendo que tienes este endpoint
+                const data = await response.json();
+                createBoard(data.board);
+            } catch (error) {
+                console.error('Error al obtener los datos:', error);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', fetchBoardData);
     </script>
 </body>
 </html>

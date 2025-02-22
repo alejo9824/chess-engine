@@ -2,7 +2,7 @@ package domain
 
 type Piece interface {
 	GetColor() Color
-	Move(x int, y int) (newX int, newY int)
+	Move(x int, y int, x2 int, y2 int, targetEmpty bool) bool
 }
 
 type Color string
