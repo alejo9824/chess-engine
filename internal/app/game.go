@@ -82,15 +82,61 @@ func (g *Game) MovePiece(x1, y1, x2, y2 int) {
 			return
 		}
 	}
-
-	if (*piece).Move(x1, y1, x2, y2, isVacia) {
-
-		g.ChessBoard.Board[x2][y2].Piece = piece
-		g.ChessBoard.Board[x1][y1].Piece = nil
-
-	} else {
-		log.Print("Movimiento   raro válido")
+	if !(*piece).Move(x1, y1, x2, y2, isVacia) {
+		log.Print("Movimiento no válido")
 		return
 	}
 
+	if !g.isPathClear(x1, y1, x2, y2) {
+		log.Print("El camino no está despejado")
+		return
+	}
+
+	g.ChessBoard.Board[x2][y2].Piece = piece
+	g.ChessBoard.Board[x1][y1].Piece = nil
+
+}
+
+func (g *Game) isPathClear(x1, y1, x2, y2 int) bool {
+
+	piece := g.ChessBoard.Board[x1][y1].Piece
+	if (*piece).GetName() == "Knight" {
+		return true
+	}
+
+	dx := x2 - x1
+	dy := y2 - y1
+
+	// Determinar la dirección del movimiento
+	stepX := 0
+	stepY := 0
+
+	if dx != 0 {
+		stepX = dx / abs(dx)
+	}
+	if dy != 0 {
+		stepY = dy / abs(dy)
+	}
+
+	// Verificar cada casilla en el camino
+	x := x1 + stepX
+	y := y1 + stepY
+
+	for x != x2 || y != y2 {
+		if g.ChessBoard.Board[x][y].Piece != nil {
+			return false
+		}
+		x += stepX
+		y += stepY
+	}
+
+	return true
+}
+
+// Función auxiliar para calcular el valor absoluto
+func abs(a int) int {
+	if a < 0 {
+		return -a
+	}
+	return a
 }

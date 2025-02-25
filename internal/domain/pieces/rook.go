@@ -34,3 +34,7 @@ func (p *Rook) Move(x int, y int, x2 int, y2 int, targetEmpty bool) bool {
 func (p *Rook) GetColor() domain.Color {
 	return p.Color
 }
+
+func (p *Rook) GetName() string {
+	return p.Name
+}

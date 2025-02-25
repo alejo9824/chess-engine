@@ -57,3 +57,7 @@ func (p *Pawn) Move(x int, y int, x2 int, y2 int, targetEmpty bool) bool {
 func (p *Pawn) GetColor() domain.Color {
 	return p.Color
 }
+
+func (p *Pawn) GetName() string {
+	return p.Name
+}

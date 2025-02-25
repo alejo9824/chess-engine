@@ -36,3 +36,7 @@ func abs(a int) int {
 	}
 	return a
 }
+
+func (p *Bishop) GetName() string {
+	return p.Name
+}

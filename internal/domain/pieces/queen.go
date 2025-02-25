@@ -37,3 +37,7 @@ func (p *Queen) Move(x int, y int, x2 int, y2 int, targetEmpty bool) bool {
 func (p *Queen) GetColor() domain.Color {
 	return p.Color
 }
+
+func (p *Queen) GetName() string {
+	return p.Name
+}

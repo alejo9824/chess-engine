@@ -32,3 +32,7 @@ func (p *Knight) Move(x int, y int, x2 int, y2 int, targetEmpty bool) bool {
 func (p *Knight) GetColor() domain.Color {
 	return p.Color
 }
+
+func (p *Knight) GetName() string {
+	return p.Name
+}
